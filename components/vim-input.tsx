@@ -5,21 +5,25 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
   Trello, Grid, Trash2, Clipboard, Download,
   FolderOpen, FolderPlus, BookOpen, Sparkles,
-  FolderDown, FolderInput
+  FolderDown, FolderInput, GitFork
 } from "lucide-react"
 import { Command } from "cmdk"
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
-const GRID_COLS = 3
+// Views row: 3 columns
+const VIEW_ITEMS = [
+  { id: "tiling", icon: Grid,     label: "Tiling", sub: "⌘1" },
+  { id: "kanban", icon: Trello,   label: "Kanban", sub: "⌘2" },
+  { id: "graph",  icon: GitFork,  label: "Graph",  sub: "⌘3" },
+]
 
-const GRID_ITEMS = [
-  { id: "tiling",         icon: Grid,       label: "Tiling",      sub: "view"   },
-  { id: "kanban",         icon: Trello,     label: "Kanban",      sub: "view"   },
-  { id: "open-projects",  icon: FolderOpen, label: "Projects",    sub: "panel"  },
-  { id: "new-project",    icon: FolderPlus, label: "New Project", sub: "action" },
-  { id: "open-index",     icon: BookOpen,   label: "Index",       sub: "panel"  },
-  { id: "open-synthesis", icon: Sparkles,   label: "Synthesis",   sub: "panel"  },
+// Navigate row: 4 columns
+const NAV_ITEMS = [
+  { id: "open-projects",  icon: FolderOpen, label: "Projects",    sub: "⌘P" },
+  { id: "new-project",    icon: FolderPlus, label: "New Project", sub: "⌘N" },
+  { id: "open-index",     icon: BookOpen,   label: "Index",       sub: "⌘I" },
+  { id: "open-synthesis", icon: Sparkles,   label: "Synthesis",   sub: "⌘G" },
 ]
 
 const ACTION_ITEMS = [
@@ -53,15 +57,28 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
   // ── Filtered items ──────────────────────────────────────────────────────
 
   const q = search.toLowerCase()
-  const gridItems = q
-    ? GRID_ITEMS.filter(i => i.label.toLowerCase().includes(q) || i.sub.includes(q))
-    : GRID_ITEMS
-  const actionItems = q
-    ? ACTION_ITEMS.filter(i => i.label.toLowerCase().includes(q) || i.sub.includes(q))
-    : ACTION_ITEMS
+  const viewItems   = q ? VIEW_ITEMS.filter(i => i.label.toLowerCase().includes(q) || i.sub.toLowerCase().includes(q))   : VIEW_ITEMS
+  const navItems    = q ? NAV_ITEMS.filter(i  => i.label.toLowerCase().includes(q) || i.sub.toLowerCase().includes(q))    : NAV_ITEMS
+  const actionItems = q ? ACTION_ITEMS.filter(i => i.label.toLowerCase().includes(q) || i.sub.toLowerCase().includes(q)) : ACTION_ITEMS
 
-  const gridCount   = gridItems.length
-  const totalItems  = gridCount + actionItems.length
+  const viewCount   = viewItems.length
+  const navCount    = navItems.length
+  const actionCount = actionItems.length
+  const totalItems  = viewCount + navCount + actionCount
+
+  // Section boundaries for keyboard nav
+  // Section 0: views   [0 .. viewCount)
+  // Section 1: nav     [viewCount .. viewCount+navCount)
+  // Section 2: actions [viewCount+navCount .. total)
+  const sections = React.useMemo(() => [
+    { start: 0,                    count: viewCount,   cols: 3 },
+    { start: viewCount,            count: navCount,    cols: 4 },
+    { start: viewCount + navCount, count: actionCount, cols: 5 },
+  ], [viewCount, navCount, actionCount])
+
+  const getSectionForIdx = React.useCallback((idx: number) => {
+    return sections.find(s => idx >= s.start && idx < s.start + s.count) ?? sections[0]
+  }, [sections])
 
   // ── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -95,19 +112,19 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
 
   // ── Grid keyboard navigation ─────────────────────────────────────────────
 
-  const ACTION_COLS = actionItems.length // actions are always a single row
+  const getItemAtIdx = React.useCallback((idx: number): string | null => {
+    if (idx < viewCount)                        return viewItems[idx]?.id ?? null
+    if (idx < viewCount + navCount)             return navItems[idx - viewCount]?.id ?? null
+    if (idx < viewCount + navCount + actionCount) return actionItems[idx - viewCount - navCount]?.id ?? null
+    return null
+  }, [viewCount, navCount, actionCount, viewItems, navItems, actionItems])
 
   const handlePopupKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     if (totalItems === 0) return
-
-    const inActions = focusedIdx >= gridCount
-    // Column width differs per section
-    const cols     = inActions ? ACTION_COLS : GRID_COLS
-    // Row boundaries within the current section
-    const secStart = inActions ? gridCount : 0
-    const localIdx = focusedIdx - secStart
-    const rowStart = secStart + Math.floor(localIdx / cols) * cols
-    const rowEnd   = Math.min(rowStart + cols - 1, secStart + (inActions ? actionItems.length : gridCount) - 1)
+    const sec      = getSectionForIdx(focusedIdx)
+    const localIdx = focusedIdx - sec.start
+    const rowStart = sec.start + Math.floor(localIdx / sec.cols) * sec.cols
+    const rowEnd   = Math.min(rowStart + sec.cols - 1, sec.start + sec.count - 1)
 
     switch (e.key) {
       case "Escape":
@@ -115,11 +132,12 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
         close()
         break
 
-      case "Enter":
+      case "Enter": {
         e.preventDefault()
-        if (focusedIdx < gridCount) handleSelect(gridItems[focusedIdx].id)
-        else handleSelect(actionItems[focusedIdx - gridCount].id)
+        const id = getItemAtIdx(focusedIdx)
+        if (id) handleSelect(id)
         break
+      }
 
       case "ArrowRight":
         e.preventDefault()
@@ -133,35 +151,38 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
 
       case "ArrowDown": {
         e.preventDefault()
-        if (inActions) break // actions are one row — down wraps to navigate
-        const below = focusedIdx + GRID_COLS
-        if (below < gridCount) {
-          setFocusedIdx(below)
-        } else if (actionItems.length > 0) {
-          setFocusedIdx(gridCount) // jump to first action
+        const nextInSec = focusedIdx + sec.cols
+        if (nextInSec < sec.start + sec.count) {
+          setFocusedIdx(nextInSec)
+        } else {
+          // Move to first item of next section
+          const nextSecStart = sec.start + sec.count
+          if (nextSecStart < totalItems) {
+            const col = localIdx % sec.cols
+            const ns  = getSectionForIdx(nextSecStart)
+            setFocusedIdx(Math.min(nextSecStart + col, nextSecStart + ns.count - 1))
+          }
         }
         break
       }
 
       case "ArrowUp": {
         e.preventDefault()
-        if (inActions) {
-          // Jump back to last row of navigate grid, same column clamped
-          const col = (focusedIdx - gridCount) % ACTION_COLS
-          const navLastRow = Math.floor((gridCount - 1) / GRID_COLS) * GRID_COLS
-          setFocusedIdx(Math.min(navLastRow + col, gridCount - 1))
-        } else {
-          const above = focusedIdx - GRID_COLS
-          if (above >= 0) {
-            setFocusedIdx(above)
-          } else if (actionItems.length > 0) {
-            setFocusedIdx(gridCount) // wrap to actions
-          }
+        const prevInSec = focusedIdx - sec.cols
+        if (prevInSec >= sec.start) {
+          setFocusedIdx(prevInSec)
+        } else if (sec.start > 0) {
+          // Move to last row of previous section
+          const prevSecEnd   = sec.start - 1
+          const ps           = getSectionForIdx(prevSecEnd)
+          const col          = localIdx % sec.cols
+          const lastRowStart = ps.start + Math.floor((ps.count - 1) / ps.cols) * ps.cols
+          setFocusedIdx(Math.min(lastRowStart + col, ps.start + ps.count - 1))
         }
         break
       }
     }
-  }, [focusedIdx, gridCount, totalItems, ACTION_COLS, gridItems, actionItems, close, handleSelect])
+  }, [focusedIdx, totalItems, getSectionForIdx, getItemAtIdx, close, handleSelect])
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -208,16 +229,14 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
                 )}
               </div>
 
-              <div className="p-3 max-h-[340px] overflow-y-auto scrollbar-none">
+              <div className="p-3 max-h-[360px] overflow-y-auto scrollbar-none space-y-3">
 
-                {/* ── Navigate tiles ─────────────────────────────────────── */}
-                {gridItems.length > 0 && (
-                  <div className="mb-3">
-                    <p className="px-1 pb-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/45">
-                      Navigate
-                    </p>
+                {/* ── Views ──────────────────────────────────────────────── */}
+                {viewItems.length > 0 && (
+                  <div>
+                    <p className="px-1 pb-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/45">Views</p>
                     <div className="grid grid-cols-3 gap-1.5">
-                      {gridItems.map((item, i) => {
+                      {viewItems.map((item, i) => {
                         const focused = focusedIdx === i
                         return (
                           <button
@@ -225,18 +244,12 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
                             ref={el => { itemRefs.current[i] = el }}
                             onClick={() => handleSelect(item.id)}
                             onMouseEnter={() => setFocusedIdx(i)}
-                            className={`group flex flex-col items-center justify-center gap-2 rounded-sm border py-4 px-2 transition-all duration-100 outline-none ${
-                              focused
-                                ? "bg-primary/12 border-primary/35 text-primary shadow-[0_0_0_1px_var(--primary),inset_0_1px_0_rgba(255,255,255,0.05)]"
-                                : "bg-white/[0.03] border-white/[0.07] text-white/55 hover:bg-white/[0.06] hover:border-white/20 hover:text-white/80"
-                            }`}
+                            className={`group flex flex-col items-center justify-center gap-2 rounded-sm border py-4 px-2 transition-all duration-100 outline-none ${focused ? "bg-primary/12 border-primary/35 text-primary shadow-[0_0_0_1px_var(--primary),inset_0_1px_0_rgba(255,255,255,0.05)]" : "bg-white/[0.03] border-white/[0.07] text-white/55 hover:bg-white/[0.06] hover:border-white/20 hover:text-white/80"}`}
                           >
                             <item.icon className={`h-[18px] w-[18px] transition-transform duration-100 ${focused ? "scale-110" : "group-hover:scale-105"}`} />
                             <div className="text-center leading-tight">
                               <div className="font-mono text-[10px] font-bold tracking-tight">{item.label}</div>
-                              <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>
-                                {item.sub}
-                              </div>
+                              <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>{item.sub}</div>
                             </div>
                           </button>
                         )
@@ -245,15 +258,13 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
                   </div>
                 )}
 
-                {/* ── Action tiles ───────────────────────────────────────── */}
-                {actionItems.length > 0 && (
-                  <div className={gridItems.length > 0 ? "border-t border-white/10 pt-3" : ""}>
-                    <p className="px-1 pb-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/45">
-                      Actions
-                    </p>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {actionItems.map((item, i) => {
-                        const idx     = gridCount + i
+                {/* ── Navigate ───────────────────────────────────────────── */}
+                {navItems.length > 0 && (
+                  <div className="border-t border-white/10 pt-3">
+                    <p className="px-1 pb-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/45">Navigate</p>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {navItems.map((item, i) => {
+                        const idx     = viewCount + i
                         const focused = focusedIdx === idx
                         return (
                           <button
@@ -261,18 +272,40 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
                             ref={el => { itemRefs.current[idx] = el }}
                             onClick={() => handleSelect(item.id)}
                             onMouseEnter={() => setFocusedIdx(idx)}
-                            className={`group flex flex-col items-center justify-center gap-2 rounded-sm border py-4 px-2 transition-all duration-100 outline-none ${
-                              focused
-                                ? "bg-primary/12 border-primary/35 text-primary shadow-[0_0_0_1px_var(--primary),inset_0_1px_0_rgba(255,255,255,0.05)]"
-                                : "bg-white/[0.03] border-white/[0.07] text-white/55 hover:bg-white/[0.06] hover:border-white/20 hover:text-white/80"
-                            }`}
+                            className={`group flex flex-col items-center justify-center gap-2 rounded-sm border py-4 px-2 transition-all duration-100 outline-none ${focused ? "bg-primary/12 border-primary/35 text-primary shadow-[0_0_0_1px_var(--primary),inset_0_1px_0_rgba(255,255,255,0.05)]" : "bg-white/[0.03] border-white/[0.07] text-white/55 hover:bg-white/[0.06] hover:border-white/20 hover:text-white/80"}`}
                           >
                             <item.icon className={`h-[18px] w-[18px] transition-transform duration-100 ${focused ? "scale-110" : "group-hover:scale-105"}`} />
                             <div className="text-center leading-tight">
                               <div className="font-mono text-[10px] font-bold tracking-tight">{item.label}</div>
-                              <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>
-                                {item.sub}
-                              </div>
+                              <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>{item.sub}</div>
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Actions ────────────────────────────────────────────── */}
+                {actionItems.length > 0 && (
+                  <div className="border-t border-white/10 pt-3">
+                    <p className="px-1 pb-2 font-mono text-[8px] font-bold uppercase tracking-[0.2em] text-white/45">Actions</p>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {actionItems.map((item, i) => {
+                        const idx     = viewCount + navCount + i
+                        const focused = focusedIdx === idx
+                        return (
+                          <button
+                            key={item.id}
+                            ref={el => { itemRefs.current[idx] = el }}
+                            onClick={() => handleSelect(item.id)}
+                            onMouseEnter={() => setFocusedIdx(idx)}
+                            className={`group flex flex-col items-center justify-center gap-2 rounded-sm border py-4 px-2 transition-all duration-100 outline-none ${focused ? "bg-primary/12 border-primary/35 text-primary shadow-[0_0_0_1px_var(--primary),inset_0_1px_0_rgba(255,255,255,0.05)]" : "bg-white/[0.03] border-white/[0.07] text-white/55 hover:bg-white/[0.06] hover:border-white/20 hover:text-white/80"}`}
+                          >
+                            <item.icon className={`h-[18px] w-[18px] transition-transform duration-100 ${focused ? "scale-110" : "group-hover:scale-105"}`} />
+                            <div className="text-center leading-tight">
+                              <div className="font-mono text-[10px] font-bold tracking-tight">{item.label}</div>
+                              <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>{item.sub}</div>
                             </div>
                           </button>
                         )

@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { TilingArea } from "@/components/tiling-area"
 import { KanbanArea } from "@/components/kanban-area"
+import { GraphArea } from "@/components/graph-area"
 import { ProjectSidebar } from "@/components/project-sidebar"
 import { StatusBar } from "@/components/status-bar"
 import { GhostPanel, type GhostNote } from "@/components/ghost-panel"
@@ -41,7 +42,7 @@ export default function Page() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isIndexOpen, setIsIndexOpen] = useState(false)
   const [isGhostPanelOpen, setIsGhostPanelOpen] = useState(false)
-  const [viewMode, setViewMode] = useState<"tiling" | "kanban">("tiling")
+  const [viewMode, setViewMode] = useState<"tiling" | "kanban" | "graph">("tiling")
   const [isCommandKOpen, setIsCommandKOpen] = useState(false)
   const [jumpToSettings, setJumpToSettings] = useState(false)
   const { settings, updateSettings, resolvedModelId, currentModel } = useAISettings()
@@ -529,6 +530,9 @@ export default function Page() {
         e.preventDefault()
         setIsCommandKOpen(prev => !prev)
       }
+      if (e.key === "1" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setViewMode("tiling") }
+      if (e.key === "2" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setViewMode("kanban") }
+      if (e.key === "3" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setViewMode("graph") }
       if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
         // Don't intercept while typing in an input/textarea
         const tag = (e.target as HTMLElement).tagName
@@ -731,6 +735,8 @@ export default function Page() {
       setViewMode("kanban")
     } else if (cmd === "tiling") {
       setViewMode("tiling")
+    } else if (cmd === "graph") {
+      setViewMode("graph")
     } else if (cmd === "open-projects") {
       setIsGhostPanelOpen(false)
       setIsIndexOpen(false)
@@ -854,7 +860,7 @@ export default function Page() {
                   hasApiKey={!!settings.apiKey}
                   onOpenSidebar={() => { setIsSidebarOpen(true); setJumpToSettings(true) }}
                 />
-              ) : (
+              ) : viewMode === "kanban" ? (
                 <KanbanArea
                   key={`kanban-${activeProjectId}`}
                   blocks={activeProject.blocks}
@@ -867,6 +873,18 @@ export default function Page() {
                   onToggleSubTask={handleToggleSubTask}
                   onDeleteSubTask={handleDeleteSubTask}
                   collapsedIds={new Set(activeProject.collapsedIds)}
+                  hasApiKey={!!settings.apiKey}
+                  onOpenSidebar={() => { setIsSidebarOpen(true); setJumpToSettings(true) }}
+                />
+              ) : (
+                <GraphArea
+                  key={`graph-${activeProjectId}`}
+                  blocks={activeProject.blocks}
+                  ghostNote={activeProject.ghostNote}
+                  onReEnrich={reEnrichBlock}
+                  onTogglePin={handleTogglePin}
+                  onEdit={editBlock}
+                  onEditAnnotation={editAnnotation}
                   hasApiKey={!!settings.apiKey}
                   onOpenSidebar={() => { setIsSidebarOpen(true); setJumpToSettings(true) }}
                 />
