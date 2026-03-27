@@ -161,9 +161,9 @@ Available models: Claude Sonnet 4.5, GPT-4o (default), Gemini 2.5 Pro, DeepSeek 
 - Receives last 10 synthesis texts to avoid near-duplicates; instructs recency weighting
 - Returns: `{ text, category }` — 15–25 word emergent thesis
 
-## Security (`proxy.ts`)
+## Security (`middleware.ts`)
 
-Next.js proxy (formerly middleware) applied to `/api/enrich` and `/api/ghost`:
+Next.js middleware applied to `/api/enrich` and `/api/ghost`:
 - **Rate limiting**: sliding-window in-memory store — 60 req/min for `/api/enrich`, 10 req/min for `/api/ghost`
 - **Origin check**: blocks requests where `Origin` header doesn't match the host (bypassed on localhost)
 - **Header stripping**: removes `x-or-key` from response headers to prevent key leakage in logs

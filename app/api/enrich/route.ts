@@ -169,9 +169,9 @@ You have live web access. For this note type, include 1–2 real source citation
     })
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("OpenRouter Error response:", errorText);
-      return NextResponse.json({ error: `API error: ${response.status}`, details: errorText }, { status: 500 })
+      const errorText = await response.text()
+      console.error("OpenRouter enrich error:", response.status, errorText)
+      return NextResponse.json({ error: "Enrichment failed. Check your API key or try again shortly." }, { status: 502 })
     }
 
     const data = await response.json()

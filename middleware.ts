@@ -30,7 +30,7 @@ function isRateLimited(ip: string, path: string): boolean {
 
 // ── Proxy ─────────────────────────────────────────────────────────────────────
 
-export function proxy(req: NextRequest) {
+export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // Only guard the two AI proxy routes
