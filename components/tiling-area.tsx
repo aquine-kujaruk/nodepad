@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useEffect, useState, useCallback } from "react"
+import React, { useMemo, useRef, useEffect, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { TileCard, type TextBlock } from "@/components/tile-card"
 import { CONTENT_TYPE_CONFIG, type ContentType } from "@/lib/content-types"
@@ -34,8 +34,6 @@ interface TilingAreaProps {
   onDeleteSubTask: (id: string, subTaskId: string) => void
   highlightedBlockId?: string | null
   onHighlight: (id: string | null) => void
-  hasApiKey: boolean
-  onOpenSidebar: () => void
 }
 
 export function TilingArea({
@@ -52,8 +50,6 @@ export function TilingArea({
   onDeleteSubTask,
   highlightedBlockId,
   onHighlight,
-  hasApiKey,
-  onOpenSidebar
 }: TilingAreaProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [activePageIdx, setActivePageIdx] = useState(0)
@@ -172,15 +168,24 @@ export function TilingArea({
   }, [])
 
   // 2. Tile Renderer with Width Invariant
-  const TileRenderer = ({ node, pageBlocks, parentDir }: { node: BSPNode, pageBlocks: TextBlock[], parentDir?: 'h' | 'v' }) => {
+  // NOTE: implemented as a plain recursive function (not a React component) so that
+  // hoveredConnectionId state changes don't cause React to unmount/remount the tile
+  // tree (which would fire mouseleave and immediately clear the hover state).
+  const getWeight = (n: BSPNode): number => {
+    if (n.type === 'leaf') return 1
+    return getWeight(n.left!) + getWeight(n.right!)
+  }
+
+  const renderBSPNode = (node: BSPNode, pageBlocks: TextBlock[], parentDir?: 'h' | 'v'): React.ReactNode => {
     if (!node) return null
-    
+
     if (node.type === 'leaf') {
       const block = pageBlocks.find((b: TextBlock) => b.id === node.blockId)
       if (!block) return null
       const isDimmed = activeConnectionId !== null && !relatedIds.has(block.id)
       return (
         <div
+          key={block.id}
           id={`tile-${block.id}`}
           className="flex flex-1 p-0.5 overflow-hidden"
         >
@@ -210,23 +215,19 @@ export function TilingArea({
       )
     }
 
-    const getWeight = (n: BSPNode): number => {
-      if (n.type === 'leaf') return 1
-      return getWeight(n.left!) + getWeight(n.right!)
-    }
-
     const leftWeight = getWeight(node.left!)
     const rightWeight = getWeight(node.right!)
 
     return (
-      <div 
+      <div
+        key={node.id}
         className={`flex flex-1 min-h-0 min-w-0 ${node.direction === 'v' ? 'flex-row' : 'flex-col'}`}
       >
         <div style={{ flex: leftWeight }} className="flex min-h-0 min-w-0">
-          <TileRenderer node={node.left!} pageBlocks={pageBlocks} parentDir={node.direction} />
+          {renderBSPNode(node.left!, pageBlocks, node.direction)}
         </div>
         <div style={{ flex: rightWeight }} className="flex min-h-0 min-w-0">
-          <TileRenderer node={node.right!} pageBlocks={pageBlocks} parentDir={node.direction} />
+          {renderBSPNode(node.right!, pageBlocks, node.direction)}
         </div>
       </div>
     )
@@ -282,7 +283,7 @@ export function TilingArea({
                   data-page-idx={idx}
                   className={`flex w-full ${heightClass} border-b border-white/5 last:border-0`}
                 >
-                  <TileRenderer node={tree} pageBlocks={chunkedPages[idx]} />
+                  {renderBSPNode(tree, chunkedPages[idx])}
                 </div>
               )
             })}
@@ -313,30 +314,6 @@ export function TilingArea({
               ))}
             </div>
 
-            {!hasApiKey && (
-              <div className="flex flex-col gap-2 rounded-sm border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2.5 w-full pointer-events-auto">
-                <p className="font-mono text-[9px] text-amber-400/80 leading-relaxed">
-                  AI enrichment is inactive — no OpenRouter API key configured.
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={onOpenSidebar}
-                    className="font-mono text-[9px] text-amber-300 underline underline-offset-2 hover:text-amber-200 transition-colors"
-                  >
-                    Open Settings →
-                  </button>
-                  <span className="font-mono text-[8px] text-amber-500/40">or</span>
-                  <a
-                    href="https://openrouter.ai/settings/keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-[9px] text-amber-500/60 hover:text-amber-400 transition-colors"
-                  >
-                    Get a key ↗
-                  </a>
-                </div>
-              </div>
-            )}
 
             <p className="text-[13px] text-white uppercase tracking-[0.15em] whitespace-nowrap">
               type anything · #type to classify · ⌘K for commands

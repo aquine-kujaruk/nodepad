@@ -20,8 +20,6 @@ interface KanbanAreaProps {
   onToggleSubTask: (id: string, subTaskId: string) => void
   onDeleteSubTask: (id: string, subTaskId: string) => void
   collapsedIds: Set<string>
-  hasApiKey: boolean
-  onOpenSidebar: () => void
 }
 
 export function KanbanArea({
@@ -36,8 +34,6 @@ export function KanbanArea({
   onToggleSubTask,
   onDeleteSubTask,
   collapsedIds,
-  hasApiKey,
-  onOpenSidebar
 }: KanbanAreaProps) {
   const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null)
   const [lockedConnectionId, setLockedConnectionId] = useState<string | null>(null)
@@ -199,30 +195,6 @@ export function KanbanArea({
               ))}
             </div>
 
-            {!hasApiKey && (
-              <div className="flex flex-col gap-2 rounded-sm border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2.5 w-full pointer-events-auto">
-                <p className="font-mono text-[9px] text-amber-400/80 leading-relaxed">
-                  AI enrichment is inactive — no OpenRouter API key configured.
-                </p>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={onOpenSidebar}
-                    className="font-mono text-[9px] text-amber-300 underline underline-offset-2 hover:text-amber-200 transition-colors"
-                  >
-                    Open Settings →
-                  </button>
-                  <span className="font-mono text-[8px] text-amber-500/40">or</span>
-                  <a
-                    href="https://openrouter.ai/settings/keys"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-[9px] text-amber-500/60 hover:text-amber-400 transition-colors"
-                  >
-                    Get a key ↗
-                  </a>
-                </div>
-              </div>
-            )}
 
             <p className="text-[13px] text-white uppercase tracking-[0.15em] whitespace-nowrap">
               type anything · #type to classify · ⌘K for commands

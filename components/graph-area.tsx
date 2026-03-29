@@ -30,8 +30,6 @@ interface GraphAreaProps {
   onTogglePin:      (id: string) => void
   onEdit:           (id: string, text: string) => void
   onEditAnnotation: (id: string, annotation: string) => void
-  hasApiKey: boolean
-  onOpenSidebar: () => void
   highlightedBlockId?: string | null
   onHighlight?: (id: string | null) => void
 }

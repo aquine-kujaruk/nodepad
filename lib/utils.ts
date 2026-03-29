@@ -18,17 +18,9 @@ export function getRelatedIds(hoveredId: string, blocks: TextBlock[]): Set<strin
   const related = new Set<string>([hoveredId])
   blocks.forEach(b => {
     if (b.id === hoveredId) return
-
-    // Primary: exact ID-based relationships (stable, rename-proof)
     const hoveredPointsToB = hovered.influencedBy?.includes(b.id) ?? false
     const bPointsToHovered = b.influencedBy?.includes(hoveredId) ?? false
-
-    // Secondary: same category — catches blocks not yet enriched
-    const sameCategory =
-      !!b.category && !!hovered.category &&
-      b.category.toLowerCase() === hovered.category.toLowerCase()
-
-    if (hoveredPointsToB || bPointsToHovered || sameCategory) related.add(b.id)
+    if (hoveredPointsToB || bPointsToHovered) related.add(b.id)
   })
   return related
 }

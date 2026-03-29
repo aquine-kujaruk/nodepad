@@ -879,6 +879,29 @@ export default function Page() {
           onGhostPanelToggle={() => setIsGhostPanelOpen(prev => !prev)}
           modelLabel={settings.apiKey ? currentModel.shortLabel : undefined}
         />
+
+        {!settings.apiKey && (
+          <div className="flex items-center justify-center gap-3 px-4 py-2 bg-amber-950/80 border-b border-amber-800/60 text-amber-200 text-xs shrink-0">
+            <span className="opacity-80">⚡ AI enrichment is inactive — add an OpenRouter API key to classify and annotate your notes.</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => { setIsSidebarOpen(true); setJumpToSettings(true) }}
+                className="px-2.5 py-1 rounded bg-amber-700/60 hover:bg-amber-600/70 text-amber-100 font-medium transition-colors cursor-pointer border border-amber-600/50"
+              >
+                Add API key →
+              </button>
+              <a
+                href="https://openrouter.ai/keys"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="opacity-60 hover:opacity-90 transition-opacity underline underline-offset-2"
+              >
+                Get a key ↗
+              </a>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-1 overflow-hidden relative">
           <main className="relative flex-1 overflow-hidden">
             {isLoaded ? (
@@ -898,8 +921,6 @@ export default function Page() {
                   onDeleteSubTask={handleDeleteSubTask}
                   highlightedBlockId={highlightedBlockId}
                   onHighlight={setHighlightedBlockId}
-                  hasApiKey={!!settings.apiKey}
-                  onOpenSidebar={() => { setIsSidebarOpen(true); setJumpToSettings(true) }}
                 />
               ) : viewMode === "kanban" ? (
                 <KanbanArea
@@ -915,8 +936,6 @@ export default function Page() {
                   onToggleSubTask={handleToggleSubTask}
                   onDeleteSubTask={handleDeleteSubTask}
                   collapsedIds={new Set(activeProject.collapsedIds)}
-                  hasApiKey={!!settings.apiKey}
-                  onOpenSidebar={() => { setIsSidebarOpen(true); setJumpToSettings(true) }}
                 />
               ) : (
                 <GraphArea
@@ -929,8 +948,6 @@ export default function Page() {
                   onTogglePin={handleTogglePin}
                   onEdit={editBlock}
                   onEditAnnotation={editAnnotation}
-                  hasApiKey={!!settings.apiKey}
-                  onOpenSidebar={() => { setIsSidebarOpen(true); setJumpToSettings(true) }}
                   highlightedBlockId={highlightedBlockId}
                   onHighlight={setHighlightedBlockId}
                 />
