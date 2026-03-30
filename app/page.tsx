@@ -242,6 +242,12 @@ export default function Page() {
   const projectsRef = useRef(projects)
   useEffect(() => { projectsRef.current = projects }, [projects])
 
+  // Stable ref to active blocks — lets useCallbacks read current blocks without
+  // listing `blocks` in their deps (which would recreate them on every state change
+  // and cause all memo-ized TileCards to re-render unnecessarily).
+  const blocksRef = useRef<TextBlock[]>([])
+  useEffect(() => { blocksRef.current = blocks }, [blocks])
+
   // Tracks which project IDs currently have a ghost generation in-flight
   const generatingRef = useRef<Set<string>>(new Set())
 
@@ -575,9 +581,6 @@ export default function Page() {
         e.preventDefault()
         setIsCommandKOpen(prev => !prev)
       }
-      if (e.key === "1" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setViewMode("tiling") }
-      if (e.key === "2" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setViewMode("kanban") }
-      if (e.key === "3" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); setViewMode("graph") }
       if (e.key === "z" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
         // Don't intercept while typing in an input/textarea
         const tag = (e.target as HTMLElement).tagName
@@ -636,7 +639,7 @@ export default function Page() {
       const initialDisplayType: ContentType = resolvedType
         ?? (HIGH_CONFIDENCE_TYPES.has(heuristicType) ? heuristicType : "general")
 
-      pushHistory(activeProjectId, blocks)
+      pushHistory(activeProjectId, blocksRef.current)
       updateActiveProject(p => ({
         ...p,
         blocks: [...p.blocks, {
@@ -651,16 +654,16 @@ export default function Page() {
       setIsCommandKOpen(false)
       enrichBlock(activeProjectId, newId, resolvedText, undefined, enrichForcedType).catch(console.error)
     },
-    [activeProjectId, blocks, pushHistory, updateActiveProject, enrichBlock]
+    [activeProjectId, pushHistory, updateActiveProject, enrichBlock]
   )
 
   const deleteBlock = useCallback((id: string) => {
-    pushHistory(activeProjectId, blocks)
+    pushHistory(activeProjectId, blocksRef.current)
     updateActiveProject(p => ({
       ...p,
       blocks: p.blocks.filter(b => b.id !== id)
     }))
-  }, [activeProjectId, blocks, pushHistory, updateActiveProject])
+  }, [activeProjectId, pushHistory, updateActiveProject])
 
   const editBlock = useCallback((id: string, newText: string) => {
     // Snapshot before the edit so Cmd+Z restores the original text
@@ -699,16 +702,16 @@ export default function Page() {
   }, [activeProjectId, enrichBlock, pushHistory])
 
   const reEnrichBlock = useCallback((id: string, newCategory?: string) => {
-    const block = blocks.find(b => b.id === id)
+    const block = blocksRef.current.find(b => b.id === id)
     if (!block) return
-    
+
     updateActiveProject(p => ({
       ...p,
       blocks: p.blocks.map(b => b.id === id ? { ...b, category: newCategory, isEnriching: true } : b)
     }))
 
     enrichBlock(activeProjectId, id, block.text, newCategory || block.category, block.contentType).catch(console.error)
-  }, [activeProjectId, blocks, updateActiveProject, enrichBlock])
+  }, [activeProjectId, updateActiveProject, enrichBlock])
 
   const editAnnotation = useCallback((id: string, newAnnotation: string) => {
     updateActiveProject(p => ({
@@ -754,20 +757,20 @@ export default function Page() {
   }, [activeProjectId])
 
   const handleChangeType = useCallback((id: string, newType: ContentType) => {
-    const block = blocks.find(b => b.id === id)
+    const block = blocksRef.current.find(b => b.id === id)
     if (!block) return
-    pushHistory(activeProjectId, blocks)
+    pushHistory(activeProjectId, blocksRef.current)
     updateActiveProject(p => ({
       ...p,
       blocks: p.blocks.map(b => b.id === id ? { ...b, contentType: newType, isEnriching: true } : b)
     }))
     enrichBlock(activeProjectId, id, block.text, block.category, newType).catch(console.error)
-  }, [activeProjectId, blocks, pushHistory, updateActiveProject, enrichBlock])
+  }, [activeProjectId, pushHistory, updateActiveProject, enrichBlock])
 
   const clearBlocks = useCallback(() => {
-    pushHistory(activeProjectId, blocks)
+    pushHistory(activeProjectId, blocksRef.current)
     updateActiveProject(p => ({ ...p, blocks: [], collapsedIds: [] }))
-  }, [activeProjectId, blocks, pushHistory, updateActiveProject])
+  }, [activeProjectId, pushHistory, updateActiveProject])
 
   const createProject = useCallback(() => {
     const newProject: Project = {

@@ -42,17 +42,17 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
   // ── Items (mod-key aware) ───────────────────────────────────────────────
 
   const VIEW_ITEMS = React.useMemo(() => [
-    { id: "tiling", icon: Grid,     label: "Tiling", sub: `${mod}1` },
-    { id: "kanban", icon: Trello,   label: "Kanban", sub: `${mod}2` },
-    { id: "graph",  icon: GitFork,  label: "Graph",  sub: `${mod}3` },
-  ], [mod])
+    { id: "tiling", icon: Grid,    label: "Tiling", sub: "" },
+    { id: "kanban", icon: Trello,  label: "Kanban", sub: "" },
+    { id: "graph",  icon: GitFork, label: "Graph",  sub: "" },
+  ], [])
 
   const NAV_ITEMS = React.useMemo(() => [
-    { id: "open-projects",  icon: FolderOpen, label: "Projects",    sub: `${mod}P` },
-    { id: "new-project",    icon: FolderPlus, label: "New Project", sub: `${mod}N` },
-    { id: "open-index",     icon: BookOpen,   label: "Index",       sub: `${mod}I` },
-    { id: "open-synthesis", icon: Sparkles,   label: "Synthesis",   sub: `${mod}G` },
-  ], [mod])
+    { id: "open-projects",  icon: FolderOpen, label: "Projects",    sub: "" },
+    { id: "new-project",    icon: FolderPlus, label: "New Project", sub: "" },
+    { id: "open-index",     icon: BookOpen,   label: "Index",       sub: "" },
+    { id: "open-synthesis", icon: Sparkles,   label: "Synthesis",   sub: "" },
+  ], [])
 
   // ── Filtered items ──────────────────────────────────────────────────────
 
@@ -249,7 +249,7 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
                             <item.icon className={`h-[18px] w-[18px] transition-transform duration-100 ${focused ? "scale-110" : "group-hover:scale-105"}`} />
                             <div className="text-center leading-tight">
                               <div className="font-mono text-[10px] font-bold tracking-tight">{item.label}</div>
-                              <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>{item.sub}</div>
+                              {item.sub && <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>{item.sub}</div>}
                             </div>
                           </button>
                         )
@@ -277,7 +277,7 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
                             <item.icon className={`h-[18px] w-[18px] transition-transform duration-100 ${focused ? "scale-110" : "group-hover:scale-105"}`} />
                             <div className="text-center leading-tight">
                               <div className="font-mono text-[10px] font-bold tracking-tight">{item.label}</div>
-                              <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>{item.sub}</div>
+                              {item.sub && <div className={`font-mono text-[7px] uppercase tracking-[0.15em] mt-0.5 ${focused ? "text-primary/60" : "text-white/40"}`}>{item.sub}</div>}
                             </div>
                           </button>
                         )

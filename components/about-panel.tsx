@@ -3,8 +3,8 @@
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { CONTENT_TYPE_CONFIG } from "@/lib/content-types"
 import {
-  Sparkles, Keyboard, Layers, Kanban, GitFork, FolderDown,
-  FolderInput, Download, Undo2, Brain, Zap, Globe, Search, Link
+  Sparkles, Layers, Kanban, GitFork, FolderDown,
+  FolderInput, Download, Brain, Zap, Globe, Search
 } from "lucide-react"
 import { useModKey } from "@/lib/utils"
 
@@ -253,14 +253,8 @@ export function AboutPanel({ open, onClose }: AboutPanelProps) {
               <div className="px-3 divide-y divide-border/40">
                 <Shortcut keys={[mod, "K"]} label="Command menu" />
                 <Shortcut keys={[mod, "Z"]} label="Undo last action" />
-                <Shortcut keys={[mod, "1"]} label="Tiling view" />
-                <Shortcut keys={[mod, "2"]} label="Kanban view" />
-                <Shortcut keys={[mod, "3"]} label="Graph view" />
-                <Shortcut keys={[mod, "P"]} label="Toggle projects sidebar" />
-                <Shortcut keys={[mod, "I"]} label="Toggle canvas index" />
-                <Shortcut keys={[mod, "G"]} label="Toggle synthesis panel" />
                 <Shortcut keys={["Enter"]} label="Submit a new node" />
-                <Shortcut keys={["Esc"]} label="Close command menu" />
+                <Shortcut keys={["Esc"]} label="Close command menu / deselect" />
               </div>
             </div>
           </Section>

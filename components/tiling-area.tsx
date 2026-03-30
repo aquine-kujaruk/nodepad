@@ -1,15 +1,33 @@
 "use client"
 
 import React, { useMemo, useRef, useEffect, useState, useCallback } from "react"
-import { motion, AnimatePresence } from "framer-motion"
 import { TileCard, type TextBlock } from "@/components/tile-card"
 import { CONTENT_TYPE_CONFIG, type ContentType } from "@/lib/content-types"
 import { getRelatedIds, useModKey } from "@/lib/utils"
-import { KanbanArea } from "./kanban-area"
 import { TilingMinimap } from "./tiling-minimap"
 
 /** Number of tiles per BSP page */
 const PAGE_SIZE = 7
+
+// Pure BSP helpers — defined outside the component so they are never recreated
+function getWeight(n: BSPNode): number {
+  if (n.type === 'leaf') return 1
+  return getWeight(n.left!) + getWeight(n.right!)
+}
+
+function buildPageTree(pageBlocks: TextBlock[], depth: number = 0): BSPNode {
+  if (pageBlocks.length === 1) {
+    return { id: pageBlocks[0].id, type: 'leaf', blockId: pageBlocks[0].id }
+  }
+  const mid = Math.floor(pageBlocks.length / 2)
+  return {
+    id: `split-${depth}-${pageBlocks[0].id}`,
+    type: 'split',
+    direction: depth % 2 === 0 ? 'v' : 'h',
+    left: buildPageTree(pageBlocks.slice(0, mid), depth + 1),
+    right: buildPageTree(pageBlocks.slice(mid), depth + 1)
+  }
+}
 
 interface BSPNode {
   id: string
@@ -105,21 +123,6 @@ export function TilingArea({
     return chunks
   }, [blocks])
 
-  // Helper to build a recursive BSP tree for a single page
-  const buildPageTree = (pageBlocks: TextBlock[], depth: number = 0): BSPNode => {
-    if (pageBlocks.length === 1) {
-      return { id: pageBlocks[0].id, type: 'leaf', blockId: pageBlocks[0].id }
-    }
-    const mid = Math.floor(pageBlocks.length / 2)
-    return {
-      id: `split-${depth}-${pageBlocks[0].id}`,
-      type: 'split',
-      direction: depth % 2 === 0 ? 'v' : 'h',
-      left: buildPageTree(pageBlocks.slice(0, mid), depth + 1),
-      right: buildPageTree(pageBlocks.slice(mid), depth + 1)
-    }
-  }
-
   const pageTrees = useMemo(() => {
     return chunkedPages.map(page => buildPageTree(page))
   }, [chunkedPages])
@@ -162,21 +165,13 @@ export function TilingArea({
     check()
     const ro = new ResizeObserver(check)
     ro.observe(container)
-    // Also re-check when children change size
-    const mo = new MutationObserver(check)
-    mo.observe(container, { childList: true, subtree: true, attributes: false })
-    return () => { ro.disconnect(); mo.disconnect() }
+    return () => ro.disconnect()
   }, [])
 
   // 2. Tile Renderer with Width Invariant
   // NOTE: implemented as a plain recursive function (not a React component) so that
   // hoveredConnectionId state changes don't cause React to unmount/remount the tile
   // tree (which would fire mouseleave and immediately clear the hover state).
-  const getWeight = (n: BSPNode): number => {
-    if (n.type === 'leaf') return 1
-    return getWeight(n.left!) + getWeight(n.right!)
-  }
-
   const renderBSPNode = (node: BSPNode, pageBlocks: TextBlock[], parentDir?: 'h' | 'v'): React.ReactNode => {
     if (!node) return null
 
@@ -237,9 +232,8 @@ export function TilingArea({
   return (
     <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#020202]">
       {/* Task Header stays sticky at top */}
-      <AnimatePresence>
-        {taskBlock && (
-          <div className={`w-full shrink-0 p-1 z-10 transition-[opacity,filter] duration-300 ${activeConnectionId && !relatedIds.has(taskBlock.id) ? 'opacity-15 saturate-0' : 'opacity-100'}`}>
+      {taskBlock && (
+        <div className={`w-full shrink-0 p-1 z-10 transition-[opacity,filter] duration-300 ${activeConnectionId && !relatedIds.has(taskBlock.id) ? 'opacity-15 saturate-0' : 'opacity-100'}`}>
             <TileCard
               block={taskBlock}
               isCollapsed={collapsedIds.has(taskBlock.id)}
@@ -259,9 +253,8 @@ export function TilingArea({
               isConnectionLocked={lockedConnectionId === taskBlock.id}
               allBlocks={blocks}
             />
-          </div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
 
       {/* Paged Mosaic with Vertical Scroll */}
       <div
