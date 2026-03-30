@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useEffect, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { TileCard, type TextBlock } from "@/components/tile-card"
 import { CONTENT_TYPE_CONFIG, type ContentType } from "@/lib/content-types"
-import { getRelatedIds } from "@/lib/utils"
+import { getRelatedIds, useModKey } from "@/lib/utils"
 import { KanbanArea } from "./kanban-area"
 import { TilingMinimap } from "./tiling-minimap"
 
@@ -51,6 +51,7 @@ export function TilingArea({
   highlightedBlockId,
   onHighlight,
 }: TilingAreaProps) {
+  const mod = useModKey()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [activePageIdx, setActivePageIdx] = useState(0)
   const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null)
@@ -316,7 +317,7 @@ export function TilingArea({
 
 
             <p className="text-[13px] text-white uppercase tracking-[0.15em] whitespace-nowrap">
-              type anything · #type to classify · ⌘K for commands
+              {`type anything · #type to classify · ${mod}K for commands`}
             </p>
           </div>
         </div>

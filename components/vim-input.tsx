@@ -8,23 +8,7 @@ import {
   FolderDown, FolderInput, GitFork
 } from "lucide-react"
 import { Command } from "cmdk"
-
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-// Views row: 3 columns
-const VIEW_ITEMS = [
-  { id: "tiling", icon: Grid,     label: "Tiling", sub: "⌘1" },
-  { id: "kanban", icon: Trello,   label: "Kanban", sub: "⌘2" },
-  { id: "graph",  icon: GitFork,  label: "Graph",  sub: "⌘3" },
-]
-
-// Navigate row: 4 columns
-const NAV_ITEMS = [
-  { id: "open-projects",  icon: FolderOpen, label: "Projects",    sub: "⌘P" },
-  { id: "new-project",    icon: FolderPlus, label: "New Project", sub: "⌘N" },
-  { id: "open-index",     icon: BookOpen,   label: "Index",       sub: "⌘I" },
-  { id: "open-synthesis", icon: Sparkles,   label: "Synthesis",   sub: "⌘G" },
-]
+import { useModKey } from "@/lib/utils"
 
 const ACTION_ITEMS = [
   { id: "export-nodepad", icon: FolderDown,  label: "Export",  sub: ".nodepad"  },
@@ -49,10 +33,26 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
   const [value, setValue] = React.useState("")
   const [search, setSearch] = React.useState("")
   const [focusedIdx, setFocusedIdx] = React.useState(0)
+  const mod = useModKey()
 
   const mainInputRef = React.useRef<HTMLInputElement>(null)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
   const itemRefs = React.useRef<(HTMLButtonElement | null)[]>([])
+
+  // ── Items (mod-key aware) ───────────────────────────────────────────────
+
+  const VIEW_ITEMS = React.useMemo(() => [
+    { id: "tiling", icon: Grid,     label: "Tiling", sub: `${mod}1` },
+    { id: "kanban", icon: Trello,   label: "Kanban", sub: `${mod}2` },
+    { id: "graph",  icon: GitFork,  label: "Graph",  sub: `${mod}3` },
+  ], [mod])
+
+  const NAV_ITEMS = React.useMemo(() => [
+    { id: "open-projects",  icon: FolderOpen, label: "Projects",    sub: `${mod}P` },
+    { id: "new-project",    icon: FolderPlus, label: "New Project", sub: `${mod}N` },
+    { id: "open-index",     icon: BookOpen,   label: "Index",       sub: `${mod}I` },
+    { id: "open-synthesis", icon: Sparkles,   label: "Synthesis",   sub: `${mod}G` },
+  ], [mod])
 
   // ── Filtered items ──────────────────────────────────────────────────────
 
@@ -211,7 +211,7 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
             >
               {/* Search input */}
               <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10">
-                <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 select-none shrink-0">⌘K</span>
+                <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/60 select-none shrink-0">{mod}K</span>
                 <input
                   ref={searchInputRef}
                   value={search}

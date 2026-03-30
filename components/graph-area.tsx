@@ -5,6 +5,7 @@ import * as d3 from "d3"
 import { CONTENT_TYPE_CONFIG } from "@/lib/content-types"
 import type { TextBlock } from "@/components/tile-card"
 import { GraphDetailPanel } from "./graph-detail-panel"
+import { useModKey } from "@/lib/utils"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -183,6 +184,7 @@ export function GraphArea({
   highlightedBlockId,
   onHighlight,
 }: GraphAreaProps) {
+  const mod = useModKey()
   const containerRef = React.useRef<HTMLDivElement>(null)
   const svgRef       = React.useRef<SVGSVGElement>(null)
   const simRef       = React.useRef<d3.Simulation<SimNode, SimLink> | null>(null)
@@ -418,7 +420,7 @@ export function GraphArea({
               </div>
 
               <p className="text-[13px] text-white uppercase tracking-[0.15em] whitespace-nowrap">
-                type anything · #type to classify · ⌘K for commands
+                {`type anything · #type to classify · ${mod}K for commands`}
               </p>
             </div>
           </div>

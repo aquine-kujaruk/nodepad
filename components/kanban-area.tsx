@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { TileCard, type TextBlock } from "@/components/tile-card"
 import { Sparkles, CheckSquare, Clock } from "lucide-react"
 import { CONTENT_TYPE_CONFIG, type ContentType } from "@/lib/content-types"
-import { getRelatedIds } from "@/lib/utils"
+import { getRelatedIds, useModKey } from "@/lib/utils"
 import { KanbanMinimap } from "./kanban-minimap"
 
 interface KanbanAreaProps {
@@ -35,6 +35,7 @@ export function KanbanArea({
   onDeleteSubTask,
   collapsedIds,
 }: KanbanAreaProps) {
+  const mod = useModKey()
   const [hoveredConnectionId, setHoveredConnectionId] = useState<string | null>(null)
   const [lockedConnectionId, setLockedConnectionId] = useState<string | null>(null)
 
@@ -197,7 +198,7 @@ export function KanbanArea({
 
 
             <p className="text-[13px] text-white uppercase tracking-[0.15em] whitespace-nowrap">
-              type anything · #type to classify · ⌘K for commands
+              {`type anything · #type to classify · ${mod}K for commands`}
             </p>
           </div>
         </div>
