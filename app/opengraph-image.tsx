@@ -24,9 +24,9 @@ export default function OGImage() {
         {/* Logo mark */}
         <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "48px" }}>
           <div style={{ display: "flex", gap: "6px" }}>
-            <div style={{ width: 28, height: 28, borderRadius: 5, background: "#3ecf6e" }} />
-            <div style={{ width: 28, height: 28, borderRadius: 5, background: "#3ecf6e", opacity: 0.6 }} />
-            <div style={{ width: 28, height: 28, borderRadius: 5, background: "#3ecf6e", opacity: 0.3 }} />
+            <div style={{ display: "flex", width: 28, height: 28, borderRadius: 5, background: "#3ecf6e" }} />
+            <div style={{ display: "flex", width: 28, height: 28, borderRadius: 5, background: "#3ecf6e", opacity: 0.6 }} />
+            <div style={{ display: "flex", width: 28, height: 28, borderRadius: 5, background: "#3ecf6e", opacity: 0.3 }} />
           </div>
           <span style={{ fontSize: 28, fontWeight: 600, color: "#f0f0f0", letterSpacing: "-0.5px" }}>
             nodepad
@@ -36,6 +36,8 @@ export default function OGImage() {
         {/* Headline */}
         <div
           style={{
+            display: "flex",
+            flexDirection: "column",
             fontSize: 72,
             fontWeight: 700,
             color: "#f0f0f0",
@@ -44,8 +46,7 @@ export default function OGImage() {
             marginBottom: 32,
           }}
         >
-          Think spatially.
-          <br />
+          <span>Think spatially.</span>
           <span style={{ color: "#3ecf6e" }}>Let AI fill the gaps.</span>
         </div>
 
