@@ -1,8 +1,13 @@
 /** @type {import('next').NextConfig} */
+const isGitHubPages = process.env.NEXT_STATIC_EXPORT === "true"
+
 const nextConfig = {
   // Static export for GitHub Pages — set NEXT_STATIC_EXPORT=true in CI.
   // NOTE: this disables app/api/* routes (they 404 on static hosts).
-  ...(process.env.NEXT_STATIC_EXPORT === "true" ? { output: "export" } : {}),
+  ...(isGitHubPages ? { output: "export" } : {}),
+  // basePath + assetPrefix required because the app lives at /nodepad/ on GH Pages.
+  // Without these, all CSS/JS/font assets are requested from / and 404.
+  ...(isGitHubPages ? { basePath: "/nodepad", assetPrefix: "/nodepad" } : {}),
   typescript: {
     // Build errors are intentionally ignored — see CLAUDE.md
     ignoreBuildErrors: true,
