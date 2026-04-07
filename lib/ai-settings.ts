@@ -12,7 +12,7 @@ export interface AIModel {
   groundingModelId?: string
 }
 
-export type AIProvider = "openrouter" | "openai"
+export type AIProvider = "openai" | "gemini"
 
 export interface AIProviderPreset {
   id: AIProvider
@@ -24,11 +24,11 @@ export interface AIProviderPreset {
 
 export const AI_PROVIDER_PRESETS: AIProviderPreset[] = [
   {
-    id: "openrouter",
-    label: "OpenRouter",
-    baseUrl: "https://openrouter.ai/api/v1",
-    keyUrl: "https://openrouter.ai/settings/keys",
-    keyPlaceholder: "sk-or-v1-...",
+    id: "gemini",
+    label: "Google Gemini",
+    baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+    keyUrl: "https://aistudio.google.com/apikey",
+    keyPlaceholder: "AIza...",
   },
   {
     id: "openai",
@@ -43,41 +43,13 @@ export function getPreset(provider: AIProvider): AIProviderPreset {
   return AI_PROVIDER_PRESETS.find(p => p.id === provider) || AI_PROVIDER_PRESETS[0]
 }
 
-export const AI_MODELS: AIModel[] = [
+export const GEMINI_MODELS: AIModel[] = [
   {
-    id: "anthropic/claude-sonnet-4-5",
-    label: "Claude Sonnet 4.5",
-    shortLabel: "Claude",
-    description: "Best reasoning & annotation quality",
-    supportsGrounding: false,
-  },
-  {
-    id: "openai/gpt-4o",
-    label: "GPT-4o",
-    shortLabel: "GPT-4o",
-    description: "Strong structured output, broad knowledge",
+    id: "gemini-3.1-flash-lite-preview",
+    label: "Gemini 3.1 Flash Lite",
+    shortLabel: "Gemini Lite",
+    description: "Fastest, most cost-efficient, free tier",
     supportsGrounding: true,
-  },
-  {
-    id: "google/gemini-2.5-pro-preview-03-25",
-    label: "Gemini 2.5 Pro",
-    shortLabel: "Gemini",
-    description: "Long-context, web grounding available",
-    supportsGrounding: true,
-  },
-  {
-    id: "deepseek/deepseek-chat",
-    label: "DeepSeek V3",
-    shortLabel: "DeepSeek",
-    description: "Cost-efficient frontier model",
-    supportsGrounding: false,
-  },
-  {
-    id: "mistralai/mistral-small-3.2-24b-instruct",
-    label: "Mistral Small 3.2",
-    shortLabel: "Mistral",
-    description: "Fast, excellent structured outputs",
-    supportsGrounding: false,
   },
 ]
 
@@ -123,11 +95,11 @@ export const OPENAI_MODELS: AIModel[] = [
 
 export function getModelsForProvider(provider: AIProvider): AIModel[] {
   if (provider === "openai") return OPENAI_MODELS
-  return AI_MODELS // openrouter + safe fallback for any stale localStorage value
+  return GEMINI_MODELS
 }
 
-export const DEFAULT_MODEL_ID = "openai/gpt-4o"
-export const DEFAULT_PROVIDER: AIProvider = "openrouter"
+export const DEFAULT_MODEL_ID = "gemini-3.1-flash-lite-preview"
+export const DEFAULT_PROVIDER: AIProvider = "gemini"
 
 export interface AISettings {
   apiKey: string
@@ -167,13 +139,9 @@ export function loadAIConfig(): AIConfig | null {
   if (!s.apiKey) return null
   const models = getModelsForProvider(s.provider)
   const model = models.find(m => m.id === s.modelId)
-  // Use the matched model's id if found; otherwise fall back to the first model
-  // for this provider.  This handles the case where localStorage still holds an
-  // OpenRouter-prefixed id (e.g. "openai/gpt-4o") after switching to OpenAI —
-  // that string won't match any entry in OPENAI_MODELS so we fall back to "gpt-4o".
   const modelId = model?.id ?? models[0]?.id ?? s.modelId ?? DEFAULT_MODEL_ID
   const supportsGrounding =
-    (s.provider === "openrouter" || s.provider === "openai") &&
+    (s.provider === "openai" || s.provider === "gemini") &&
     s.webGrounding &&
     (model?.supportsGrounding ?? false)
   return { apiKey: s.apiKey, modelId, supportsGrounding, provider: s.provider, customBaseUrl: s.customBaseUrl }
@@ -184,15 +152,10 @@ export function getBaseUrl(config: AIConfig): string {
 }
 
 export function getProviderHeaders(config: AIConfig): Record<string, string> {
-  const base: Record<string, string> = {
+  return {
     "Content-Type": "application/json",
     "Authorization": `Bearer ${config.apiKey}`,
   }
-  if (config.provider === "openrouter") {
-    base["HTTP-Referer"] = "https://nodepad.space"
-    base["X-Title"] = "nodepad"
-  }
-  return base
 }
 
 /** @deprecated Use loadAIConfig() for direct browser → provider calls.
@@ -201,11 +164,11 @@ export function getAIHeaders(): Record<string, string> {
   const config = loadAIConfig()
   if (!config) return {}
   const models = getModelsForProvider(config.provider)
-  const model = models.find(m => m.id === config.modelId) || AI_MODELS.find(m => m.id === DEFAULT_MODEL_ID)!
+  const model = models.find(m => m.id === config.modelId) || models[0]
   return {
     "x-or-key": config.apiKey,
     "x-or-model": config.modelId,
-    "x-or-supports-grounding": model.supportsGrounding ? "true" : "false",
+    "x-or-supports-grounding": model?.supportsGrounding ? "true" : "false",
   }
 }
 
@@ -236,9 +199,6 @@ export function useAISettings() {
   const resolvedModelId = (() => {
     const model = models.find(m => m.id === settings.modelId) || models[0]
     if (!model) return settings.modelId
-    if (settings.provider === "openrouter" && settings.webGrounding && model.supportsGrounding) {
-      return `${model.id}:online`
-    }
     return model.id
   })()
 

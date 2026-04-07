@@ -163,17 +163,18 @@ export async function enrichBlockClient(
 
   let model = config.modelId
   let webSearchOptions: Record<string, unknown> | undefined
+  let geminiExtraBody: Record<string, unknown> | undefined
   if (shouldGround) {
-    if (config.provider === "openrouter") {
-      if (!model.endsWith(":online")) model = `${model}:online`
-    } else if (config.provider === "openai") {
+    if (config.provider === "openai") {
       const modelDef = getModelsForProvider("openai").find(m => m.id === config.modelId)
       if (modelDef?.groundingModelId) model = modelDef.groundingModelId
       webSearchOptions = {}
+    } else if (config.provider === "gemini") {
+      geminiExtraBody = { google: { tools: [{ google_search: {} }] } }
     }
   }
 
-  const supportsJsonSchema = config.provider === "openrouter" || config.provider === "openai"
+  const supportsJsonSchema = config.provider === "openrouter" || config.provider === "openai" || config.provider === "gemini"
   // gpt-*-search-preview models have known issues with strict json_schema + web_search_options;
   // fall back to json_object mode (guaranteed valid JSON, no schema enforcement)
   const useStrictSchema = supportsJsonSchema && !webSearchOptions
@@ -256,6 +257,8 @@ You have live web access. For this note type, include 1–2 real source citation
             temperature: 0.1,
           }
         : { web_search_options: webSearchOptions }),
+      // Gemini grounding via google_search tool passed through extra_body
+      ...(geminiExtraBody !== undefined ? geminiExtraBody : {}),
     }),
   })
 

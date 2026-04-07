@@ -21,7 +21,7 @@ export async function generateGhostClient(
   if (!config) throw new Error("No API key configured")
 
   // Ghost falls back to a lighter model if none is set
-  const model = config.modelId || "google/gemini-2.0-flash-lite-001"
+  const model = config.modelId || "gemini-3.1-flash-lite-preview"
 
   const categories = [...new Set(context.map(c => c.category).filter(Boolean))]
 
