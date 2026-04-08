@@ -158,6 +158,17 @@ export function getProviderHeaders(config: AIConfig): Record<string, string> {
   }
 }
 
+export function getGeminiNativeUrl(modelId: string): string {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent`
+}
+
+export function getGeminiNativeHeaders(apiKey: string): Record<string, string> {
+  return {
+    "Content-Type": "application/json",
+    "x-goog-api-key": apiKey,
+  }
+}
+
 /** @deprecated Use loadAIConfig() for direct browser → provider calls.
  *  Kept for any remaining server-route usage during transition. */
 export function getAIHeaders(): Record<string, string> {

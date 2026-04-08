@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from "framer-motion"
 import {
   Trello, Grid, Trash2, Clipboard, Download,
   FolderOpen, FolderPlus, BookOpen, Sparkles,
-  FolderDown, FolderInput, GitFork
+  FolderDown, FolderInput, GitFork, Mic, Loader2
 } from "lucide-react"
 import { Command } from "cmdk"
 import { useModKey } from "@/lib/utils"
+import { createAudioRecorder, transcribeAudio, type AudioRecorder } from "@/lib/voice-transcribe"
 
 const ACTION_ITEMS = [
   { id: "export-nodepad", icon: FolderDown,  label: "Export",  sub: ".nodepad"  },
@@ -33,11 +34,16 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
   const [value, setValue] = React.useState("")
   const [search, setSearch] = React.useState("")
   const [focusedIdx, setFocusedIdx] = React.useState(0)
+  const [isRecording, setIsRecording] = React.useState(false)
+  const [isTranscribing, setIsTranscribing] = React.useState(false)
+  const [voiceError, setVoiceError] = React.useState<string | null>(null)
   const mod = useModKey()
 
   const mainInputRef = React.useRef<HTMLInputElement>(null)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
   const itemRefs = React.useRef<(HTMLButtonElement | null)[]>([])
+  const recorderRef = React.useRef<AudioRecorder | null>(null)
+  const errorTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Items (mod-key aware) ───────────────────────────────────────────────
 
@@ -109,6 +115,62 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
     setSearch("")
     close()
   }, [onCommand, value, close])
+
+  const showVoiceError = React.useCallback((msg: string) => {
+    setVoiceError(msg)
+    if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
+    errorTimerRef.current = setTimeout(() => setVoiceError(null), 3000)
+  }, [])
+
+  const handleVoiceToggle = React.useCallback(async () => {
+    if (isTranscribing) return
+
+    if (isRecording) {
+      setIsRecording(false)
+      setIsTranscribing(true)
+      try {
+        const blob = await recorderRef.current!.stop()
+        if (blob.size < 1024) {
+          setIsTranscribing(false)
+          return
+        }
+        const text = await transcribeAudio(blob)
+        if (text) {
+          setValue(prev => prev ? `${prev} ${text}` : text)
+        }
+        requestAnimationFrame(() => mainInputRef.current?.focus())
+      } catch (err) {
+        const msg = err instanceof Error && err.name === "NotAllowedError"
+          ? "Microphone access denied"
+          : "Transcription failed"
+        showVoiceError(msg)
+      } finally {
+        setIsTranscribing(false)
+        recorderRef.current = null
+      }
+    } else {
+      try {
+        const recorder = createAudioRecorder()
+        await recorder.start()
+        recorderRef.current = recorder
+        setIsRecording(true)
+      } catch (err) {
+        const msg = err instanceof Error && err.name === "NotAllowedError"
+          ? "Microphone access denied"
+          : "Could not start recording"
+        showVoiceError(msg)
+      }
+    }
+  }, [isRecording, isTranscribing, showVoiceError])
+
+  React.useEffect(() => {
+    return () => {
+      if (recorderRef.current?.isRecording()) {
+        recorderRef.current.stop().catch(() => {})
+      }
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current)
+    }
+  }, [])
 
   // ── Grid keyboard navigation ─────────────────────────────────────────────
 
@@ -375,6 +437,32 @@ export function VimInput({ onSubmit, onCommand, isCommandKOpen, setIsCommandKOpe
                 <span>K</span>
               </kbd>
               <span className="text-[9px] font-mono font-bold text-white/55 uppercase tracking-tighter">Commands</span>
+            </div>
+
+            <div className="h-4 w-px bg-white/20" />
+
+            <div className="relative">
+              <button
+                onClick={handleVoiceToggle}
+                disabled={isTranscribing}
+                title={isRecording ? "Stop recording" : "Dictate"}
+                className={`flex items-center justify-center w-6 h-6 rounded transition-all duration-150 outline-none disabled:opacity-40 ${
+                  isRecording
+                    ? "text-red-400 bg-red-500/15 border border-red-500/30 animate-pulse"
+                    : "text-white/55 hover:text-white/80 hover:bg-white/5"
+                }`}
+              >
+                {isTranscribing
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Mic className="h-3.5 w-3.5" />
+                }
+              </button>
+
+              {voiceError && (
+                <div className="absolute bottom-full right-0 mb-2 whitespace-nowrap rounded border border-white/15 bg-black/90 px-2.5 py-1.5 font-mono text-[9px] text-red-400 shadow-lg">
+                  {voiceError}
+                </div>
+              )}
             </div>
 
             <div className="h-4 w-px bg-white/20" />

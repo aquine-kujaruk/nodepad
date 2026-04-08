@@ -39,7 +39,7 @@ const nextConfig = {
           {
             // Permissions policy — disable features the app doesn't use
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(self), geolocation=()",
           },
           {
             // Content Security Policy
